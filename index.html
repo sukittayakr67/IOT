@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Learning & Quiz - Pastel Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Mitr', sans-serif;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            min-height: 100vh;
+        }
+
+        /* 3D Flip Card Settings */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+        .flashcard-inner {
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+        }
+        
+        /* Custom Button Gradients */
+        .btn-pastel-blue {
+            background: linear-gradient(to right, #a1c4fd, #c2e9fb);
+            color: #2c3e50;
+        }
+        .btn-pastel-blue:hover {
+            background: linear-gradient(to right, #8eb5f5, #b0def5);
+        }
+        .btn-pastel-pink {
+            background: linear-gradient(to right, #ff9a9e, #fecfef);
+            color: #2c3e50;
+        }
+        .btn-pastel-pink:hover {
+            background: linear-gradient(to right, #f8868a, #f7bce6);
+        }
+        
+        .quiz-option {
+            transition: all 0.3s ease;
+        }
+        .quiz-option:hover:not(.disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .quiz-option.correct {
+            background-color: #d4edda !important;
+            border-color: #c3e6cb !important;
+            color: #155724 !important;
+        }
+        .quiz-option.incorrect {
+            background-color: #f8d7da !important;
+            border-color: #f5c6cb !important;
+            color: #721c24 !important;
+        }
+        .disabled {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        /* Modal transition */
+        #transitionModal {
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased flex flex-col items-center py-10 px-4">
+
+    <div class="w-full max-w-2xl bg-white bg-opacity-90 backdrop-blur-md rounded-3xl shadow-xl overflow-hidden p-6 md:p-10 border border-white">
+        
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-semibold text-indigo-600 mb-2">☁️ IoT Easy Learning</h1>
+            <p id="mode-subtitle" class="text-gray-500">โหมดเรียนรู้: แฟลชการ์ดคำศัพท์</p>
+        </div>
+
+        <!-- ================= LEARNING MODE ================= -->
+        <div id="learning-section" class="flex flex-col items-center">
+            
+            <!-- Progress Bar -->
+            <div class="w-full mb-6">
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>ความคืบหน้า</span>
+                    <span id="progress-text">0% (0/12)</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="progress-bar" class="bg-gradient-to-r from-blue-300 to-pink-300 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Flashcard -->
+            <div class="w-full h-80 perspective-1000 cursor-pointer" onclick="flipCard()">
+                <div id="flashcard-inner" class="w-full h-full relative transform-style-3d flashcard-inner">
+                    <!-- Front -->
+                    <div class="absolute w-full h-full backface-hidden bg-white border-2 border-blue-100 rounded-2xl shadow-sm flex flex-col items-center justify-center p-6 text-center">
+                        <div id="card-emoji" class="text-6xl mb-4">🌐</div>
+                        <h2 id="card-term" class="text-2xl font-medium text-gray-800">IoT (Internet of Things)</h2>
+                        <p class="text-sm text-gray-400 mt-4">(คลิกเพื่อดูความหมาย)</p>
+                    </div>
+                    <!-- Back -->
+                    <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-blue-50 border-2 border-blue-200 rounded-2xl shadow-sm flex flex-col items-center justify-center p-8 text-center">
+                        <h3 class="text-lg font-medium text-indigo-500 mb-2">ความหมาย:</h3>
+                        <p id="card-def" class="text-lg text-gray-700 leading-relaxed">โครงสร้างพื้นฐานที่เชื่อมโยงวัตถุทางกายภาพและสิ่งเสมือนจริงเข้าด้วยกันผ่านเครือข่าย</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex justify-between w-full mt-8">
+                <button onclick="prevCard()" class="px-6 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium transition shadow-sm">
+                    &larr; ก่อนหน้า
+                </button>
+                <div class="text-gray-400 py-2"><span id="current-card-num">1</span> / 12</div>
+                <button onclick="nextCard()" class="px-6 py-2 rounded-full btn-pastel-blue font-medium transition shadow-sm">
+                    ถัดไป &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= TRANSITION MODAL ================= -->
+        <div id="transitionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-4">
+            <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl transform scale-100 transition-transform">
+                <div class="text-5xl mb-4">🎉</div>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-2">เก่งมาก!</h2>
+                <p class="text-gray-600 mb-6">คุณเรียนรู้คำศัพท์ครบทั้ง 12 คำแล้ว พร้อมที่จะไปทดสอบความรู้หรือยัง?</p>
+                <div class="flex flex-col gap-3">
+                    <button onclick="startQuiz()" class="w-full py-3 rounded-xl btn-pastel-pink font-semibold shadow-md text-lg">
+                        ไปลุยควิซกันเลย! 🚀
+                    </button>
+                    <button onclick="closeModal()" class="w-full py-2 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                        ขอทบทวนอีกนิด
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= QUIZ MODE ================= -->
+        <div id="quiz-section" class="hidden flex-col items-center w-full">
+            <div class="w-full flex justify-between items-center mb-6 border-b pb-4">
+                <span class="text-indigo-500 font-medium">ข้อที่ <span id="quiz-current-num">1</span> / 12</span>
+                <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium">คะแนน: <span id="quiz-score">0</span></span>
+            </div>
+
+            <h2 id="quiz-question" class="text-xl font-medium text-gray-800 mb-6 w-full text-center">คำถาม?</h2>
+
+            <div id="quiz-options" class="w-full flex flex-col gap-3 mb-6">
+                <!-- Options will be injected here -->
+            </div>
+
+            <div id="quiz-feedback" class="hidden w-full p-4 rounded-xl mb-6 text-center font-medium">
+                <!-- Feedback (Correct/Incorrect) -->
+            </div>
+
+            <button id="btn-next-quiz" onclick="nextQuizQuestion()" class="hidden px-8 py-3 rounded-xl btn-pastel-blue font-semibold shadow-md w-full md:w-auto mt-2">
+                ข้อต่อไป &rarr;
+            </button>
+        </div>
+
+        <!-- ================= RESULT SECTION ================= -->
+        <div id="result-section" class="hidden flex-col items-center w-full text-center py-6">
+            <div class="text-6xl mb-4" id="result-emoji">🏆</div>
+            <h2 class="text-3xl font-semibold text-gray-800 mb-2">สรุปผลคะแนน</h2>
+            <p class="text-gray-500 mb-6">บททดสอบความรู้ Internet of Things</p>
+            
+            <div class="bg-gradient-to-r from-blue-50 to-pink-50 p-8 rounded-2xl w-full max-w-sm mx-auto mb-8 border border-gray-100">
+                <p class="text-5xl font-bold text-indigo-500 mb-2" id="final-score-text">10/12</p>
+                <p class="text-lg text-gray-600" id="final-message">เยี่ยมยอด!</p>
+            </div>
+
+            <button onclick="restartApp()" class="px-8 py-3 rounded-xl btn-pastel-blue font-semibold shadow-md">
+                กลับไปทบทวนใหม่ 🔄
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Data Structure for Flashcards and Quiz
+        const iotData = [
+            {
+                term: "IoT (Internet of Things)", emoji: "🌐",
+                definition: "โครงสร้างพื้นฐานที่เชื่อมโยงวัตถุทางกายภาพและสิ่งเสมือนจริงเข้าด้วยกันผ่านเครือข่าย",
+                question: "IoT (Internet of Things) คืออะไร?",
+                options: [
+                    "ระบบเครือข่ายที่เชื่อมต่อเฉพาะคอมพิวเตอร์เข้าด้วยกัน",
+                    "โครงสร้างที่เชื่อมโยงวัตถุและสิ่งเสมือนจริงเข้าด้วยกัน ทำให้สื่อสารกันได้อัตโนมัติ",
+                    "โปรแกรมสำหรับวิเคราะห์ข้อมูลขนาดใหญ่ (Big Data)",
+                    "เทคโนโลยีการสร้างโลกเสมือนจริง (VR)"
+                ],
+                answer: 1
+            },
+            {
+                term: "M2M (Machine to Machine)", emoji: "🤖",
+                definition: "การที่สิ่งของและเซ็นเซอร์สามารถสื่อสารและทำงานร่วมกันได้เองแบบอัตโนมัติ โดยไม่ต้องรอคนสั่ง",
+                question: "ระบบการทำงานแบบ M2M มีลักษณะสำคัญอย่างไร?",
+                options: [
+                    "มนุษย์ต้องเป็นผู้ควบคุมเครื่องจักรทุกขั้นตอน",
+                    "การเชื่อมต่อระหว่างมือถือกับคอมพิวเตอร์ผ่านสาย USB",
+                    "สิ่งของและเซ็นเซอร์สื่อสารและทำงานร่วมกันได้เองแบบอัตโนมัติ",
+                    "การใช้เครื่องจักรผลิตสินค้าในโรงงานอุตสาหกรรม"
+                ],
+                answer: 2
+            },
+            {
+                term: "Sensing Layer (ชั้นอุปกรณ์)", emoji: "🌡️",
+                definition: "ผู้สังเกตการณ์หน้างาน ทำหน้าที่ตรวจจับและเก็บข้อมูลจากโลกจริง เช่น เซ็นเซอร์ต่างๆ",
+                question: "สถาปัตยกรรมชั้นใดเปรียบเสมือน 'พนักงานรับออเดอร์' คอยเก็บข้อมูลหน้างาน?",
+                options: ["Application Layer", "Network Layer", "Processing Layer", "Sensing Layer"],
+                answer: 3
+            },
+            {
+                term: "Network Layer (ชั้นเครือข่าย)", emoji: "📡",
+                definition: "ถนนส่งข้อมูล ทำหน้าที่เป็นช่องทางขนส่งข้อมูลจากหน้างานไปที่ส่วนกลาง เช่น Wi-Fi, NB-IoT",
+                question: "ชั้นใดทำหน้าที่เป็น 'ถนนส่งข้อมูล' ไปยังส่วนประมวลผล?",
+                options: ["Network Layer", "Sensing Layer", "Processing Layer", "Application Layer"],
+                answer: 0
+            },
+            {
+                term: "Processing Layer (ชั้นประมวลผล)", emoji: "🧠",
+                definition: "สมองคิดคำนวณ ทำหน้าที่รับข้อมูลดิบมาวิเคราะห์ คัดกรอง และตัดสินใจบนคลาวด์",
+                question: "สถาปัตยกรรมชั้นใดทำหน้าที่วิเคราะห์ข้อมูลและตัดสินใจเปรียบเสมือน 'พ่อครัว'?",
+                options: ["Network Layer", "Application Layer", "Processing Layer", "Sensing Layer"],
+                answer: 2
+            },
+            {
+                term: "Application Layer (ชั้นแอปพลิเคชัน)", emoji: "📱",
+                definition: "หน้าจอส่วนควบคุม ทำหน้าที่แสดงผลลัพธ์ให้คนดูและรับคำสั่งจากผู้ใช้งาน",
+                question: "การแสดงกราฟข้อมูลบนหน้าจอมือถือ จัดอยู่ในสถาปัตยกรรมชั้นใด?",
+                options: ["Sensing Layer", "Processing Layer", "Network Layer", "Application Layer"],
+                answer: 3
+            },
+            {
+                term: "Unique Identification", emoji: "🏠",
+                definition: "การใช้ IP Address หรือ MAC Address เพื่อระบุตำแหน่งและผู้ส่งข้อมูลของอุปกรณ์ทุกชิ้น",
+                question: "การระบุตัวตน (Unique Identification) ของอุปกรณ์ IoT เปรียบได้กับสิ่งใด?",
+                options: ["บ้านเลขที่", "ตู้ไปรษณีย์", "กุญแจบ้าน", "แผนที่เดินทาง"],
+                answer: 0
+            },
+            {
+                term: "Lightweight Protocols", emoji: "💬",
+                definition: "โปรโตคอลสื่อสารที่ออกแบบมาเฉพาะสำหรับอุปกรณ์ที่มีข้อจำกัดสูง เช่น MQTT และ CoAP",
+                question: "โปรโตคอลเช่น MQTT และ CoAP ซึ่งออกแบบมาเพื่อประหยัดแบตเตอรี่ จัดอยู่ในกลุ่มใด?",
+                options: ["Heavyweight Protocols", "Lightweight Protocols", "Security Protocols", "Routing Protocols"],
+                answer: 1
+            },
+            {
+                term: "6LoWPAN", emoji: "🗜️",
+                definition: "เทคโนโลยีการบีบอัดขนาดแพ็กเก็ตข้อมูล ตัดส่วนที่ซ้ำซ้อนทิ้ง เพื่อลดการใช้พลังงานเวลาส่งข้อมูล",
+                question: "เทคโนโลยี 6LoWPAN มีประโยชน์อย่างไรต่อระบบ IoT?",
+                options: [
+                    "ช่วยเพิ่มความเร็วอินเทอร์เน็ตเป็น 6G",
+                    "ทำให้อุปกรณ์กันน้ำได้",
+                    "บีบอัดข้อมูลตัดส่วนซ้ำซ้อนทิ้ง เพื่อประหยัดพลังงานเวลาส่งข้อมูล",
+                    "ขยายหน้าจอแสดงผลให้ใหญ่ขึ้น"
+                ],
+                answer: 2
+            },
+            {
+                term: "Semantic Interoperability", emoji: "📝",
+                definition: "การสร้างกติกากลาง (เช่น LwM2M) บังคับให้อุปกรณ์ทุกยี่ห้อใช้ฟอร์มข้อมูลเดียวกัน เพื่อให้ทำงานร่วมกันได้",
+                question: "การที่อุปกรณ์ต่างยี่ห้อสามารถคุยกันรู้เรื่อง (Plug and Play) เกิดจากหลักการใด?",
+                options: [
+                    "Semantic Interoperability (ความเข้าใจข้อมูลที่ตรงกัน)",
+                    "Data Encryption (การเข้ารหัสข้อมูล)",
+                    "Hardware Synchronization",
+                    "Wireless Charging"
+                ],
+                answer: 0
+            },
+            {
+                term: "Device Shadow", emoji: "👥",
+                definition: "พื้นที่จำลองบนคลาวด์ที่รับคำสั่งแทนฮาร์ดแวร์จริงขณะที่อุปกรณ์ตัดการเชื่อมต่อเพื่อประหยัดแบตเตอรี่",
+                question: "สิ่งใดทำหน้าที่คล้าย 'เลขารับฝากข้อความ' บนคลาวด์เมื่ออุปกรณ์หน้างานหลับ (เข้าโหมดประหยัดไฟ)?",
+                options: ["Network Gateway", "Microcontroller", "Device Shadow (Digital Twin)", "Lightweight Node"],
+                answer: 2
+            },
+            {
+                term: "OTA (Over-The-Air)", emoji: "🔄",
+                definition: "การสั่งดาวน์โหลดและอัปเดตซอฟต์แวร์ใหม่ผ่านอินเทอร์เน็ตไร้สาย สามารถอัปเดตหลายเครื่องพร้อมกันได้",
+                question: "การอัปเดตซอฟต์แวร์ของเซ็นเซอร์นับพันตัวพร้อมกันแบบไร้สาย เรียกว่าอะไร?",
+                options: ["Plug and Play", "OTA (Over-The-Air)", "M2M Transfer", "Cloud Computing"],
+                answer: 1
+            }
+        ];
+
+        // App State
+        let currentIndex = 0;
+        let isFlipped = false;
+        let learnedSet = new Set();
+        let modalShown = false;
+
+        // Quiz State
+        let quizIndex = 0;
+        let score = 0;
+        let quizQuestions = [];
+
+        // DOM Elements
+        const innerCard = document.getElementById('flashcard-inner');
+        const termEl = document.getElementById('card-term');
+        const emojiEl = document.getElementById('card-emoji');
+        const defEl = document.getElementById('card-def');
+        const currentNumEl = document.getElementById('current-card-num');
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progressBar');
+        const transitionModal = document.getElementById('transitionModal');
+        
+        // Sections
+        const learningSection = document.getElementById('learning-section');
+        const quizSection = document.getElementById('quiz-section');
+        const resultSection = document.getElementById('result-section');
+        const subtitle = document.getElementById('mode-subtitle');
+
+        // Initial Load
+        function initApp() {
+            learnedSet.add(0);
+            renderCard();
+            updateProgress();
+            // Shuffle questions for quiz
+            quizQuestions = [...iotData].sort(() => Math.random() - 0.5);
+        }
+
+        // --- FLASHCARD LOGIC ---
+
+        function renderCard() {
+            const data = iotData[currentIndex];
+            termEl.innerText = data.term;
+            emojiEl.innerText = data.emoji;
+            defEl.innerText = data.definition;
+            currentNumEl.innerText = currentIndex + 1;
+            
+            // reset flip
+            if(isFlipped) {
+                innerCard.classList.remove('rotate-y-180');
+                isFlipped = false;
+            }
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            if(isFlipped) {
+                innerCard.classList.add('rotate-y-180');
+            } else {
+                innerCard.classList.remove('rotate-y-180');
+            }
+        }
+
+        function nextCard() {
+            if (currentIndex < iotData.length - 1) {
+                currentIndex++;
+                learnedSet.add(currentIndex);
+                renderCard();
+                updateProgress();
+                checkCompletion();
+            } else {
+                checkCompletion(true); // Force check on last card
+            }
+        }
+
+        function prevCard() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                renderCard();
+            }
+        }
+
+        function updateProgress() {
+            const pct = Math.round((learnedSet.size / iotData.length) * 100);
+            progressText.innerText = `${pct}% (${learnedSet.size}/${iotData.length})`;
+            document.getElementById('progress-bar').style.width = `${pct}%`;
+        }
+
+        function checkCompletion(forced = false) {
+            if (learnedSet.size === iotData.length && !modalShown && (currentIndex === iotData.length - 1 || forced)) {
+                setTimeout(() => {
+                    transitionModal.classList.remove('hidden');
+                    modalShown = true;
+                }, 500);
+            }
+        }
+
+        function closeModal() {
+            transitionModal.classList.add('hidden');
+        }
+
+        // --- QUIZ LOGIC ---
+
+        function startQuiz() {
+            closeModal();
+            learningSection.classList.add('hidden');
+            quizSection.classList.remove('hidden');
+            quizSection.classList.add('flex');
+            subtitle.innerText = "โหมดทดสอบ: ทบทวนความรู้";
+            
+            quizIndex = 0;
+            score = 0;
+            renderQuiz();
+        }
+
+        function renderQuiz() {
+            const qData = quizQuestions[quizIndex];
+            document.getElementById('quiz-current-num').innerText = quizIndex + 1;
+            document.getElementById('quiz-score').innerText = score;
+            document.getElementById('quiz-question').innerText = qData.question;
+            
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('btn-next-quiz').classList.add('hidden');
+
+            qData.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option w-full text-left p-4 rounded-xl border-2 border-gray-100 bg-white hover:bg-blue-50 hover:border-blue-200 text-gray-700 shadow-sm';
+                btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt}`;
+                btn.onclick = () => selectOption(idx, btn, qData);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function selectOption(selectedIndex, btnElement, qData) {
+            // Disable all options
+            const buttons = document.querySelectorAll('.quiz-option');
+            buttons.forEach(btn => btn.classList.add('disabled'));
+
+            const feedback = document.getElementById('quiz-feedback');
+            feedback.classList.remove('hidden');
+            
+            if (selectedIndex === qData.answer) {
+                // Correct
+                btnElement.classList.add('correct');
+                score++;
+                document.getElementById('quiz-score').innerText = score;
+                feedback.className = 'w-full p-4 rounded-xl mb-6 text-center font-medium bg-green-100 text-green-800';
+                feedback.innerText = '✅ ถูกต้องเก่งมาก!';
+            } else {
+                // Incorrect
+                btnElement.classList.add('incorrect');
+                // Highlight correct answer
+                buttons[qData.answer].classList.add('correct');
+                feedback.className = 'w-full p-4 rounded-xl mb-6 text-center font-medium bg-red-100 text-red-800';
+                feedback.innerText = '❌ ผิดจ้า คำตอบที่ถูกคือข้อ ' + String.fromCharCode(65 + qData.answer);
+            }
+
+            document.getElementById('btn-next-quiz').classList.remove('hidden');
+        }
+
+        function nextQuizQuestion() {
+            quizIndex++;
+            if (quizIndex < quizQuestions.length) {
+                renderQuiz();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            quizSection.classList.add('hidden');
+            quizSection.classList.remove('flex');
+            resultSection.classList.remove('hidden');
+            resultSection.classList.add('flex');
+            subtitle.innerText = "สรุปผลการเรียนรู้";
+
+            document.getElementById('final-score-text').innerText = `${score} / 12`;
+            
+            const msgEl = document.getElementById('final-message');
+            const emojiEl = document.getElementById('result-emoji');
+            
+            if (score === 12) {
+                msgEl.innerText = "สมบูรณ์แบบ! คุณคือผู้เชี่ยวชาญ IoT 🚀";
+                emojiEl.innerText = "👑";
+            } else if (score >= 8) {
+                msgEl.innerText = "ทำได้ดีมาก! เข้าใจหลักการได้ยอดเยี่ยม 🌟";
+                emojiEl.innerText = "🏆";
+            } else if (score >= 5) {
+                msgEl.innerText = "พยายามได้ดี! ทบทวนอีกนิดก็เก่งแล้ว 👍";
+                emojiEl.innerText = "✨";
+            } else {
+                msgEl.innerText = "ไม่เป็นไรนะ กลับไปอ่านแฟลชการ์ดอีกรอบได้เลย 💪";
+                emojiEl.innerText = "📚";
+            }
+        }
+
+        function restartApp() {
+            // Reset App State
+            currentIndex = 0;
+            learnedSet.clear();
+            modalShown = false;
+            quizQuestions = [...iotData].sort(() => Math.random() - 0.5); // Shuffle anew
+            
+            // Reset UI
+            resultSection.classList.add('hidden');
+            resultSection.classList.remove('flex');
+            learningSection.classList.remove('hidden');
+            learningSection.classList.add('flex');
+            subtitle.innerText = "โหมดเรียนรู้: แฟลชการ์ดคำศัพท์";
+            
+            initApp();
+        }
+
+        // Run setup on load
+        window.onload = initApp;
+    </script>
+</body>
+</html>
